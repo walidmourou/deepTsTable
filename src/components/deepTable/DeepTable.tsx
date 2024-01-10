@@ -34,80 +34,73 @@ export default function DeepTable({
   displayActions = true,
   addButton = false,
 }: Readonly<DeepTableProps>) {
-  // Define Filters
-  const [filters, setFilters] = useState<Dictionary<Filter>>({});
-
-  //   const tmpFilters = {} as Dictionary<Filter>;
-
-  columnNames.forEach((col) => {
-    if (col.filtering && !col.invisible) {
-      // tmpFilters[col.id] = {
-      //   label: col.label,
-      //   type: col.type,
-      //   values: rowsValues
-      //     .map((row) => row[col.id].toString())
-      //     .filter(onlyUnique)
-      //     .sort(),
-      //   value: null,
-      // };
-
-      setFilters({
-        ...filters,
-        [col.id]: {
-          label: col.label,
-          type: col.type,
-          values: rowsValues
-            .map((row) => row[col.id].toString())
-            .filter(onlyUnique)
-            .sort(),
-          value: null,
-        },
-      });
-    }
-  });
-  //   setFilters(tmpFilters)
-  // Define search inputs
-  const [searchFields, setSearchFields] = useState<Dictionary<Filter>>({});
-  columnNames.forEach((col) => {
-    if (col.searchable && !col.invisible) {
-      setSearchFields({
-        ...searchFields,
-        [col.id]: {
-          label: col.label,
-          type: col.type,
-          value: null,
-        },
-      });
-    }
-  });
-
   // Deep Clone
   const [displayRows, setDisplayRows] = useState<TableDataType>(
     JSON.parse(JSON.stringify(rowsValues))
-    //   rowsValues.map((row, idx)=> [{"tabRowOrderIdx": idx}, ...row])
   );
   const [rowsPerPage, setRowsPerPage] = useState<string>("5");
-
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const pageFirstLastRow = (page: number) => {
     const pageFirstRow = (page - 1) * parseInt(rowsPerPage);
     const pageLastRow = pageFirstRow + parseInt(rowsPerPage);
     return [pageFirstRow, Math.min(pageLastRow, displayRows.length)];
   };
-
   const pageRows = (page: number): TableDataType => {
     const [fr, lr] = pageFirstLastRow(page);
     return displayRows.slice(fr, lr);
   };
-
-  const [currentPage, setCurrentPage] = useState<number>(1);
-
+  const rangeArray = (start: number, end: number) =>
+    Array.from({ length: end + 1 - start }, (_, k) => k + start);
   const lastTablePage = () => {
     return (
       Math.floor(displayRows.length / parseInt(rowsPerPage)) +
-      (displayRows.length / parseInt(rowsPerPage) === 0 ? 0 : 1)
+      (displayRows.length % parseInt(rowsPerPage) === 0 ? 0 : 1)
     );
   };
+  const getPagination = (currentPage: number) => {
+    const lastPage = lastTablePage();
+    if (lastPage <= 5) {
+      return rangeArray(1, lastPage);
+    } else if (3 <= currentPage && currentPage <= lastPage - 2) {
+      return rangeArray(currentPage - 2, currentPage + 2);
+    } else if (currentPage <= 2) {
+      return rangeArray(1, 5);
+    } else {
+      return rangeArray(lastPage - 4, lastPage);
+    }
+  };
+  // Define Filters
+  const [filters, setFilters] = useState<Dictionary<Filter>>({});
+  // Define search inputs
+  const [searchFields, setSearchFields] = useState<Dictionary<Filter>>({});
 
+  useEffect(() => {
+    columnNames.forEach((col) => {
+      if (col.filtering && !col.searchable && !col.invisible) {
+        setFilters({
+          ...filters,
+          [col.id]: {
+            label: col.label,
+            type: col.type,
+            values: rowsValues
+              .map((row) => row[col.id].toString())
+              .filter(onlyUnique)
+              .sort((a, b) => a.localeCompare(b)),
+            value: null,
+          },
+        });
+      } else if (col.searchable && !col.filtering && !col.invisible) {
+        setSearchFields({
+          ...searchFields,
+          [col.id]: {
+            label: col.label,
+            type: col.type,
+            value: null,
+          },
+        });
+      }
+    });
+  }, []);
   useEffect(() => {
     let tempRows = JSON.parse(JSON.stringify(rowsValues)) as TableDataType;
     Object.keys(filters).forEach((key) => {
@@ -126,7 +119,7 @@ export default function DeepTable({
         tempRows = tempRows.filter((row) =>
           row[key]
             .toString()
-            .includes(searchFields[key].value?.toString() || "")
+            .includes(searchFields[key].value?.toString() ?? "")
         );
       }
     });
@@ -136,17 +129,15 @@ export default function DeepTable({
   useEffect(() => {
     const lastPage =
       Math.floor(displayRows.length / parseInt(rowsPerPage)) +
-      (displayRows.length / parseInt(rowsPerPage) === 0 ? 0 : 1);
+      (displayRows.length % parseInt(rowsPerPage) === 0 ? 0 : 1);
     setCurrentPage(currentPage > lastPage ? lastPage : currentPage);
-  }, [displayRows, currentPage, rowsPerPage]);
-
-  // console.log(Object.keys(searchFields));
+  }, [rowsPerPage, displayRows]);
 
   return (
     <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
       <div className="flex items-center justify-between py-1 bg-white dark:bg-gray-800">
         <div className="flex items-center justify-start bg-white dark:bg-gray-800">
-          {Object.keys(searchFields).map((flt) => (
+          {Object.keys(searchFields).map((flt, idx) => (
             <div key={flt} className="mx-1">
               <label htmlFor="table-search" className="sr-only">
                 Search
@@ -171,10 +162,11 @@ export default function DeepTable({
                 </div>
                 <input
                   type="text"
-                  id={"table-search-" + searchFields[flt].label}
+                  // id={"table-search-" + idx.toString()}
+                  key={"table-search-" + idx.toString()}
                   className="block p-2 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg  bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                   placeholder={"Search for " + searchFields[flt].label}
-                  value={searchFields[flt].value?.toString() || ""}
+                  value={searchFields[flt].value?.toString() ?? ""}
                   onChange={(e) =>
                     setSearchFields({
                       ...searchFields,
@@ -223,12 +215,12 @@ export default function DeepTable({
                       },
                     });
                   }}
-                  value={filters[flt].value?.toString() || ""}
+                  value={filters[flt].value?.toString() ?? ""}
                 >
                   <option value="" className="font-bold">
                     {filters[flt].label}
                   </option>
-                  {filters[flt]?.values.map((v) => {
+                  {filters[flt]?.values?.map((v) => {
                     return (
                       <option key={v} value={v}>
                         {v}
@@ -287,7 +279,11 @@ export default function DeepTable({
               {columnNames.map(
                 (c, idx) =>
                   !c.invisible && (
-                    <th key={idx} scope="col" className="px-6 py-3">
+                    <th
+                      key={"col" + idx.toString()}
+                      scope="col"
+                      className="px-6 py-3"
+                    >
                       {c.label}
                     </th>
                   )
@@ -304,7 +300,7 @@ export default function DeepTable({
           {pageRows(currentPage).map((row, rid) => {
             return (
               <tr
-                key={rid}
+                key={"row" + rid.toString()}
                 className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 {selectable && (
@@ -376,18 +372,18 @@ export default function DeepTable({
                     key={rid.toString() + "-action"}
                     className="flex items-center px-6 py-4 space-x-3"
                   >
-                    <a
-                      href="#"
-                      className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                    <button
+                      type="button"
+                      className="text-yellow-400 hover:text-white border border-yellow-400 hover:bg-yellow-500 focus:ring-4 focus:outline-none focus:ring-yellow-300 font-medium rounded-lg text-xs px-2 py-1 text-center me-2 mb-2 dark:border-yellow-300 dark:text-yellow-300 dark:hover:text-white dark:hover:bg-yellow-400 dark:focus:ring-yellow-900"
                     >
                       Edit
-                    </a>
-                    <a
-                      href="#"
-                      className="font-medium text-red-600 dark:text-red-500 hover:underline"
+                    </button>
+                    <button
+                      type="button"
+                      className="text-red-700 hover:text-white border border-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-xs px-2 py-1 text-center me-2 mb-2 dark:border-red-500 dark:text-red-500 dark:hover:text-white dark:hover:bg-red-600 dark:focus:ring-red-900"
                     >
-                      Remove
-                    </a>
+                      Delete
+                    </button>
                   </td>
                 )}
               </tr>
@@ -426,8 +422,21 @@ export default function DeepTable({
           </div>
           <ul className="inline-flex -space-x-px text-sm h-8">
             <li>
-              <a
-                href="#"
+              <button
+                type="button"
+                className="flex items-center justify-center px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                onClick={() => {
+                  if (currentPage !== 1) {
+                    setCurrentPage(1);
+                  }
+                }}
+              >
+                {"<<"}
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
                 className="flex items-center justify-center px-3 h-8 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                 onClick={() => {
                   if (currentPage !== 1) {
@@ -435,17 +444,17 @@ export default function DeepTable({
                   }
                 }}
               >
-                Previous
-              </a>
+                {"<"}
+              </button>
             </li>
 
-            {Array.from(Array(lastTablePage()).keys()).map((v) => (
-              <li key={v + 1}>
-                <a
-                  href="#"
+            {getPagination(currentPage).map((v) => (
+              <li key={v}>
+                <button
+                  type="button"
                   className={
                     "flex items-center justify-center px-3 h-8 border-gray-300 dark:border-gray-700 " +
-                    (v + 1 === currentPage
+                    (v === currentPage
                       ? "text-gray-500 border  bg-white   hover:bg-gray-100  hover:text-gray-700 dark:bg-gray-800  dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white leading-tight"
                       : "text-blue-600 border  bg-blue-50 hover:bg-blue-100  hover:text-blue-700 dark:bg-gray-700  dark:text-white")
                   }
@@ -455,13 +464,13 @@ export default function DeepTable({
                     }
                   }}
                 >
-                  {v + 1}
-                </a>
+                  {v}
+                </button>
               </li>
             ))}
             <li>
-              <a
-                href="#"
+              <button
+                type="button"
                 className="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                 onClick={() => {
                   if (currentPage !== lastTablePage()) {
@@ -469,8 +478,21 @@ export default function DeepTable({
                   }
                 }}
               >
-                Next
-              </a>
+                {">"}
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className="flex items-center justify-center px-3 h-8 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                onClick={() => {
+                  if (currentPage !== lastTablePage()) {
+                    setCurrentPage(lastTablePage());
+                  }
+                }}
+              >
+                {">>"}
+              </button>
             </li>
           </ul>
         </nav>
