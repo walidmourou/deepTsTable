@@ -1,11 +1,42 @@
 import { useState, useEffect } from "react";
-import {
-  ColumnType,
-  Dictionary,
-  TableColumn,
-  TableDataType,
-  Filter,
-} from "./tableTypes";
+
+//Types, interfaces and Enums
+export enum CellTextAlign {
+  right = "text-right",
+  center = "text-center",
+  left = "text-left",
+}
+export enum ColumnType {
+  boolean = "Boolean",
+  integer = "Integer",
+  float = "Float",
+  string = "String",
+  timestamp = "Timestamp",
+}
+export type TableColumn = {
+  id: string;
+  label: string;
+  minWidth: number;
+  align?: CellTextAlign;
+  type: ColumnType;
+  format?: (value: any) => any;
+  highlight?: boolean;
+  invisible?: boolean;
+  filtering?: boolean;
+  searchable?: boolean;
+  notEditable?: boolean;
+  notAddable?: boolean;
+};
+export type Filter = {
+  label: string;
+  type?: ColumnType;
+  values?: Array<string>;
+  value: string | boolean | null;
+};
+export type TableDataType = Array<Dictionary<string | number | boolean>>;
+export interface Dictionary<T> {
+  [key: string]: T;
+}
 
 type DeepTableProps = {
   columnNames: TableColumn[];
@@ -13,8 +44,9 @@ type DeepTableProps = {
   displayHeader?: boolean;
   displayPagination?: boolean;
   selectable?: boolean;
-  displayActions?: boolean;
-  addButton?: boolean;
+  displayEditAction?: boolean;
+  displayDeleteAction?: boolean;
+  displayAddButton?: boolean;
 };
 
 function onlyUnique(
@@ -30,9 +62,10 @@ export default function DeepTable({
   rowsValues = [],
   displayHeader = true,
   displayPagination = true,
-  selectable = true,
-  displayActions = true,
-  addButton = false,
+  selectable = false,
+  displayEditAction = false,
+  displayDeleteAction = false,
+  displayAddButton = false,
 }: Readonly<DeepTableProps>) {
   // Deep Clone
   const [displayRows, setDisplayRows] = useState<TableDataType>(
@@ -125,7 +158,6 @@ export default function DeepTable({
     });
     setDisplayRows(tempRows);
   }, [filters, searchFields, rowsValues]);
-
   useEffect(() => {
     const lastPage =
       Math.floor(displayRows.length / parseInt(rowsPerPage)) +
@@ -232,7 +264,7 @@ export default function DeepTable({
             );
           })}
         </div>
-        {addButton && (
+        {displayAddButton && (
           <div>
             <button
               type="button"
@@ -288,7 +320,7 @@ export default function DeepTable({
                     </th>
                   )
               )}
-              {displayActions && (
+              {(displayEditAction || displayDeleteAction) && (
                 <th scope="col" className="px-6 py-3">
                   Action
                 </th>
@@ -367,23 +399,27 @@ export default function DeepTable({
                     )
                   );
                 })}
-                {displayActions && (
+                {(displayEditAction || displayDeleteAction) && (
                   <td
                     key={rid.toString() + "-action"}
                     className="flex items-center px-6 py-4 space-x-3"
                   >
-                    <button
-                      type="button"
-                      className="text-yellow-400 hover:text-white border border-yellow-400 hover:bg-yellow-500 focus:ring-4 focus:outline-none focus:ring-yellow-300 font-medium rounded-lg text-xs px-2 py-1 text-center me-2 mb-2 dark:border-yellow-300 dark:text-yellow-300 dark:hover:text-white dark:hover:bg-yellow-400 dark:focus:ring-yellow-900"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="text-red-700 hover:text-white border border-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-xs px-2 py-1 text-center me-2 mb-2 dark:border-red-500 dark:text-red-500 dark:hover:text-white dark:hover:bg-red-600 dark:focus:ring-red-900"
-                    >
-                      Delete
-                    </button>
+                    {displayEditAction && (
+                      <button
+                        type="button"
+                        className="text-yellow-400 hover:text-white border border-yellow-400 hover:bg-yellow-500 focus:ring-4 focus:outline-none focus:ring-yellow-300 font-medium rounded-lg text-xs px-2 py-1 text-center me-2 mb-2 dark:border-yellow-300 dark:text-yellow-300 dark:hover:text-white dark:hover:bg-yellow-400 dark:focus:ring-yellow-900"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {displayDeleteAction && (
+                      <button
+                        type="button"
+                        className="text-red-700 hover:text-white border border-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-xs px-2 py-1 text-center me-2 mb-2 dark:border-red-500 dark:text-red-500 dark:hover:text-white dark:hover:bg-red-600 dark:focus:ring-red-900"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </td>
                 )}
               </tr>

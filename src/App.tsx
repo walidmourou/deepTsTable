@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-
+import { ThemeModeSwitcher } from "./components/ThemeModeSwitcher/ThemeModeSwitcher";
 import DeepTable from "./components/deepTable/DeepTable";
 import {
   ColumnType,
   TableColumn,
   CellTextAlign,
-} from "./components/deepTable/tableTypes";
+} from "./components/deepTable/DeepTable";
 
 function App() {
   const [enabledTable, setEnabledTable] = useState(false);
@@ -19,41 +19,21 @@ function App() {
       });
   }, []);
 
-  const colNames = [
-    {
-      id: "id",
-      label: "ID",
-      minWidth: 10,
-      align: CellTextAlign.right,
-      type: ColumnType.integer,
-    },
-    {
-      id: "postId",
-      label: "Post ID",
-      minWidth: 10,
-      align: CellTextAlign.right,
-      type: ColumnType.integer,
-      filtering: true,
-    },
-    {
-      id: "name",
-      label: "Name",
-      minWidth: 10,
-      align: CellTextAlign.left,
-      type: ColumnType.string,
-      searchable: true,
-    },
-    {
-      id: "email",
-      label: "Email",
-      minWidth: 10,
-      align: CellTextAlign.left,
-      type: ColumnType.string,
-    },
-  ] as TableColumn[];
   return (
     <div className="p-1">
-      <h1>Components List</h1>
+      <div className="flex justify-between align-middle">
+        <div>
+          <h1 className="mb-4 text-3xl font-extrabold text-gray-900 dark:text-white md:text-3xl lg:text-3xl">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">
+              TPP Data Team
+            </span>{" "}
+            React UI Components.
+          </h1>
+        </div>
+        <div>
+          <ThemeModeSwitcher />
+        </div>
+      </div>
       <div>
         <button
           type="button"
@@ -69,5 +49,38 @@ function App() {
     </div>
   );
 }
+
+const colNames = [
+  {
+    id: "id",
+    label: "ID",
+    minWidth: 10,
+    align: CellTextAlign.right,
+    type: ColumnType.integer,
+  },
+  {
+    id: "postId",
+    label: "Post ID",
+    minWidth: 10,
+    align: CellTextAlign.right,
+    type: ColumnType.integer,
+    // filtering: true,
+  },
+  {
+    id: "name",
+    label: "Name",
+    minWidth: 10,
+    align: CellTextAlign.left,
+    type: ColumnType.string,
+    // searchable: true,
+  },
+  {
+    id: "email",
+    label: "Email",
+    minWidth: 10,
+    align: CellTextAlign.left,
+    type: ColumnType.string,
+  },
+] as TableColumn[];
 
 export default App;
