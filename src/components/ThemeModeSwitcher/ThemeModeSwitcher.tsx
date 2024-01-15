@@ -22,7 +22,6 @@ export function ThemeModeSwitcher() {
     setDarkMode((prevMode) => !prevMode);
   };
 
-  console.log("darkMode", darkMode)
   return (
     <button
       id="theme-toggle"

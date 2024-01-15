@@ -3,7 +3,7 @@ import {
   TableColumn,
   TableDataType,
   CellTextAlign,
-} from "./tableTypes";
+} from "./DeepTable";
 
 export const testColumns: TableColumn[] = [
   {

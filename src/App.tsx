@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { ThemeModeSwitcher } from "./components/ThemeModeSwitcher/ThemeModeSwitcher";
-import DeepTable from "./components/deepTable/DeepTable";
-import {
+import DeepTable, {
+  CellTextAlign,
   ColumnType,
   TableColumn,
-  CellTextAlign,
 } from "./components/deepTable/DeepTable";
 
 function App() {
@@ -43,7 +42,7 @@ function App() {
           Table
         </button>
         {enabledTable && (
-          <DeepTable columnNames={colNames} rowsValues={tableData} />
+          <DeepTable columnNames={colNames} initialRowsValues={tableData} />
         )}
       </div>
     </div>
@@ -64,7 +63,8 @@ const colNames = [
     minWidth: 10,
     align: CellTextAlign.right,
     type: ColumnType.integer,
-    // filtering: true,
+    canFilter: true,
+    canOrder: true,
   },
   {
     id: "name",
@@ -72,7 +72,8 @@ const colNames = [
     minWidth: 10,
     align: CellTextAlign.left,
     type: ColumnType.string,
-    // searchable: true,
+    canSearch: true,
+    canOrder: true,
   },
   {
     id: "email",
@@ -80,6 +81,8 @@ const colNames = [
     minWidth: 10,
     align: CellTextAlign.left,
     type: ColumnType.string,
+    canFilter: true,
+    canOrder: true,
   },
 ] as TableColumn[];
 
