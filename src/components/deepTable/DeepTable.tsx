@@ -30,8 +30,6 @@ export type TableColumn = {
   canFilter?: boolean;
   canSearch?: boolean;
   canOrder?: boolean;
-  // notEditable?: boolean;
-  // notAddable?: boolean;
 };
 export type Filter = {
   [key: string]: string | number | boolean;
@@ -40,7 +38,12 @@ export type TableDataType = Array<Dictionary<any>>;
 export interface Dictionary<T> {
   [key: string]: T;
 }
-
+type TablePageType = {
+  pageRows: TableDataType;
+  firstPageRow: number;
+  lastPageRow: number;
+  pagination: number[];
+};
 type DeepTableProps = {
   columnNames: TableColumn[];
   initialRowsValues: TableDataType;
@@ -56,8 +59,14 @@ function onlyUnique(value: any, index: number, array: Array<any>) {
   return array.indexOf(value) === index;
 }
 
-export const ColumnOrderSvg = ({ colOrder }: { colOrder: ColumnOrderType }) => {
-  if (colOrder === ColumnOrderType.neutral) {
+export const ColumnOrderSvg = ({
+  colOrder,
+  colId,
+}: {
+  colOrder: { [key: string]: string };
+  colId: string;
+}) => {
+  if (!(colId in colOrder)) {
     return (
       <svg
         fill="#571940"
@@ -71,7 +80,7 @@ export const ColumnOrderSvg = ({ colOrder }: { colOrder: ColumnOrderType }) => {
       </svg>
     );
   }
-  if (colOrder === ColumnOrderType.asc) {
+  if (colId in colOrder && colOrder[colId] === ColumnOrderType.asc) {
     return (
       <svg
         fill="#df58ae"
@@ -95,6 +104,7 @@ export const ColumnOrderSvg = ({ colOrder }: { colOrder: ColumnOrderType }) => {
     </svg>
   );
 };
+const DEFAULT_ROWS_PER_PAGE = 5;
 
 export default function DeepTable({
   columnNames = [],
@@ -110,7 +120,9 @@ export default function DeepTable({
   const [displayedRows, setDisplayedRows] = useState<TableDataType>(
     JSON.parse(JSON.stringify(initialRowsValues))
   );
-  const [rowsPerPage, setRowsPerPage] = useState<string>("5");
+  const [rowsPerPage, setRowsPerPage] = useState<string>(
+    DEFAULT_ROWS_PER_PAGE.toString()
+  );
   const [currentPage, setCurrentPage] = useState<number>(1);
   // Define Filters
   const [filters, setFilters] = useState<Filter>({});
@@ -118,15 +130,17 @@ export default function DeepTable({
   const [searchFields, setSearchFields] = useState<Dictionary<string>>({});
   // Define order inputs
   const [columnOrder, setColumnOrder] = useState<Dictionary<string>>({});
-
   const pageFirstLastRow = (page: number) => {
-    const pageFirstRow = (page - 1) * parseInt(rowsPerPage);
-    const pageLastRow = pageFirstRow + parseInt(rowsPerPage);
-    return [pageFirstRow, Math.min(pageLastRow, displayedRows.length)];
+    const pageFirstRow = (page - 1) * parseInt(rowsPerPage) + 1;
+    const pageLastRow = pageFirstRow + parseInt(rowsPerPage) - 1;
+    return [
+      Math.min(pageFirstRow, displayedRows.length),
+      Math.min(pageLastRow, displayedRows.length),
+    ];
   };
   const pageRows = (page: number): TableDataType => {
     const [fr, lr] = pageFirstLastRow(page);
-    return displayedRows.slice(fr, lr);
+    return displayedRows.slice(fr - 1, lr);
   };
   const rangeArray = (start: number, end: number) =>
     Array.from({ length: end + 1 - start }, (_, k) => k + start);
@@ -148,6 +162,15 @@ export default function DeepTable({
       return rangeArray(lastPage - 4, lastPage);
     }
   };
+
+  // Define table page
+  const [tablePage, setTablePage] = useState<TablePageType>({
+    pageRows: pageRows(currentPage),
+    firstPageRow: pageFirstLastRow(currentPage)[0],
+    lastPageRow: pageFirstLastRow(currentPage)[1],
+    pagination: getPagination(currentPage),
+  });
+
   const sortFunction = (colId: string) => {
     return (a: any, b: any) => {
       if (
@@ -214,91 +237,16 @@ export default function DeepTable({
     setDisplayedRows(updateDisplayedRows());
     setCurrentPage(1);
   }, [filters, searchFields, columnOrder]);
-
-  //////////////////////////////////////////////////////
-  // useEffect(() => {
-  //   let tempRows = JSON.parse(
-  //     JSON.stringify(initialRowsValues)
-  //   ) as TableDataType;
-  //   Object.keys(filters).forEach((key) => {
-  //     if (filters[key].value) {
-  //       tempRows = tempRows.filter(
-  //         (row) =>
-  //           row[key] ===
-  //           (filters[key].type === ColumnType.boolean
-  //             ? filters[key].value === "true"
-  //             : filters[key].value)
-  //       );
-  //     }
-  //   });
-  //   Object.keys(searchFields).forEach((key) => {
-  //     if (searchFields[key].value) {
-  //       tempRows = tempRows.filter((row) =>
-  //         row[key]
-  //           .toString()
-  //           .includes(searchFields[key].value?.toString() ?? "")
-  //       );
-  //     }
-  //   });
-  //   setDisplayedRows(tempRows);
-  // }, [filters, searchFields]);
-  //////////////////////////////////////////////////////
-  // useEffect(() => {
-  //   const columnOrder = ()
-  // }, [dataOrder]);
-  //////////////////////////////////////////////////////
-  // const setOrder = (colId: string, upDown: string) => {
-  //   const getMaxSortOrder = () => {
-  //     let maxSortOrder = 0;
-  //     Object.keys(dataOrder).forEach(
-  //       (v) =>
-  //         (maxSortOrder = Math.max(maxSortOrder, dataOrder[v].sortOrder ?? 0))
-  //     );
-  //     return maxSortOrder;
-  //   };
-  //   const getcolIdBySortOrder = () => {
-  //     displayedRows.sort((a, b) => {
-  //       let colOrder = Object.keys(dataOrder).forEach((v) => {
-  //         if (dataOrder[v].sortOrder) {
-  //           return [v, dataOrder[v].sortOrder];
-  //         }
-  //       });
-  //       colOrder = colOrder.sort((a, b) => a[0] - b[0]);
-  //     });
-  //   };
-  //////////////////////////////////////////////////////
-  //   const selectedColumnOrder = dataOrder[colId];
-  //   if (selectedColumnOrder.value === upDown) {
-  //     setDataOrder({
-  //       ...dataOrder,
-  //       colId: {
-  //         label: selectedColumnOrder.label,
-  //         type: selectedColumnOrder.type,
-  //         value: ColumnOrderType.neutral,
-  //         sortOrder: 0,
-  //       },
-  //     });
-  //     // FIXME: Reorder all
-  //   } else if (upDown === ColumnOrderType.asc) {
-  //     setDataOrder({
-  //       ...dataOrder,
-  //       colId: {
-  //         label: selectedColumnOrder.label,
-  //         type: selectedColumnOrder.type,
-  //         value: ColumnOrderType.asc,
-  //         sortOrder: getMaxSortOrder(),
-  //       },
-  //     });
-  //   }
-  // };
-  //////////////////////////////////////////////////////
+  
   useEffect(() => {
-    const lastPage =
-      Math.floor(displayedRows.length / parseInt(rowsPerPage)) +
-      (displayedRows.length % parseInt(rowsPerPage) === 0 ? 0 : 1);
-    setCurrentPage(currentPage > lastPage ? lastPage : currentPage);
-  }, [rowsPerPage, displayedRows]);
-
+    setTablePage({
+      pageRows: pageRows(currentPage),
+      firstPageRow: pageFirstLastRow(currentPage)[0],
+      lastPageRow: pageFirstLastRow(currentPage)[1],
+      pagination: getPagination(currentPage),
+    });
+  }, [currentPage, rowsPerPage, displayedRows]);
+  
   function columnOrderSvgClickHandler(e: { currentTarget: { id: string } }) {
     if (!(e.currentTarget.id in columnOrder)) {
       setColumnOrder({
@@ -486,19 +434,10 @@ export default function DeepTable({
                               id={c.id}
                               onClick={columnOrderSvgClickHandler}
                             >
-                              {!(c.id in columnOrder) ? (
-                                <ColumnOrderSvg
-                                  colOrder={ColumnOrderType.neutral}
-                                />
-                              ) : columnOrder[c.id] == ColumnOrderType.asc ? (
-                                <ColumnOrderSvg
-                                  colOrder={ColumnOrderType.asc}
-                                />
-                              ) : (
-                                <ColumnOrderSvg
-                                  colOrder={ColumnOrderType.desc}
-                                />
-                              )}
+                              <ColumnOrderSvg
+                                colOrder={columnOrder}
+                                colId={c.id}
+                              />
                             </div>
                           </div>
                         )}
@@ -515,7 +454,7 @@ export default function DeepTable({
           </thead>
         )}
         <tbody>
-          {pageRows(currentPage).map((row, rid) => {
+          {tablePage.pageRows.map((row, rid) => {
             return (
               <tr
                 key={"row" + rid.toString()}
@@ -623,7 +562,10 @@ export default function DeepTable({
               aria-label="Pagination"
               id="small"
               className="p-2 mb-1 mr-4 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-              onChange={(e) => setRowsPerPage(e.target.value)}
+              onChange={(e) => {
+                setRowsPerPage(e.target.value);
+                setCurrentPage(1);
+              }}
               value={rowsPerPage}
             >
               <option value="5">5</option>
@@ -633,8 +575,7 @@ export default function DeepTable({
             <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
               Showing{" "}
               <span className="font-semibold text-gray-900 dark:text-white">
-                {pageFirstLastRow(currentPage)[0] + 1}-
-                {pageFirstLastRow(currentPage)[1]}
+                {tablePage.firstPageRow}-{tablePage.lastPageRow}
               </span>{" "}
               of{" "}
               <span className="font-semibold text-gray-900 dark:text-white">
@@ -670,7 +611,7 @@ export default function DeepTable({
               </button>
             </li>
 
-            {getPagination(currentPage).map((v) => (
+            {tablePage.pagination.map((v) => (
               <li key={v}>
                 <button
                   type="button"
